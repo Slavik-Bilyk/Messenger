@@ -4,6 +4,8 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const authRoutes = require("./routes/auth.js"); 
+const messageRoutes = require("./routes/messages.js");
 
 dotenv.config();
 
@@ -13,6 +15,10 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/auth", authRoutes); 
+app.use("/api/messages", messageRoutes);
+
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Підключено до MongoDB"))
