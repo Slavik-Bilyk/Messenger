@@ -5,7 +5,6 @@ const User = require("../models/User.js");
 
 const router = express.Router();
 
-// 📌 Реєстрація користувача
 router.post("/register", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -20,7 +19,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// 📌 Вхід користувача
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -39,4 +37,4 @@ router.post("/login", async (req, res) => {
   }
 });
 
-module.exports = router; // Важливо: Експортуємо через `module.exports`
+module.exports = router; 

@@ -12,7 +12,6 @@ router.post("/send", async (req, res) => {
         return res.status(400).json({ error: "Всі поля обов'язкові!" });
       }
   
-      // 📌 Перевіряємо, чи sender і receiver є коректними ObjectId
       if (!mongoose.Types.ObjectId.isValid(sender) || !mongoose.Types.ObjectId.isValid(receiver)) {
         return res.status(400).json({ error: "Невірний формат ObjectId" });
       }
