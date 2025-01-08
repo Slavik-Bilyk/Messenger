@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000", {
-  auth: { token: localStorage.getItem("token") },
-}); 
+let socket; 
 
 function App() {
   const [token, setToken] = useState("");
@@ -26,12 +24,28 @@ function App() {
     if (data.token) {
       localStorage.setItem("token", data.token);
       setToken(data.token);
-      socket.auth = { token: data.token }; 
-      socket.connect();
+
+      if (!socket) {
+        socket = io("http://localhost:5000", { auth: { token: data.token } });
+        setupSocketListeners();
+      }
     }
   };
 
   useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+
+  
+      if (!socket) {
+        socket = io("http://localhost:5000", { auth: { token: storedToken } });
+        setupSocketListeners();
+      }
+    }
+  }, []);
+
+  const setupSocketListeners = () => {
     socket.on("connect", () => {
       console.log("✅ WebSocket підключено:", socket.id);
     });
@@ -53,9 +67,7 @@ function App() {
       console.log("🔴 Користувач офлайн:", data);
       setUsers((prevUsers) => prevUsers.filter((user) => user.userId !== data.userId));
     });
-
-    return () => socket.disconnect();
-  }, []);
+  };
 
   const fetchChatHistory = async (userId) => {
     if (!token) return;
@@ -76,24 +88,57 @@ function App() {
     fetchChatHistory(user.userId);
   };
 
+  const register = async () => {
+    const username = prompt("Введіть новий логін:");
+    const password = prompt("Введіть пароль:");
+  
+    if (!username || !password) return alert("Всі поля обов'язкові!");
+  
+    const response = await fetch("http://localhost:5000/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+  
+    const data = await response.json();
+    if (data.error) {
+      alert(data.error);
+    } else {
+      alert("✅ Реєстрація успішна! Тепер увійдіть у систему.");
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    setToken(""); 
+    window.location.reload();
+  };
+
   const sendMessage = () => {
     if (message.trim() === "" || !selectedUser) return;
+  
     const newMessage = {
       sender: "65f8b2a7a3d5a26f6b9c1e12",
       receiver: selectedUser.userId,
       text: message,
     };
-
-    socket.emit("sendMessage", newMessage); 
-
-    setMessages((prev) => [...prev, newMessage]); 
+  
+    socket.emit("sendMessage", newMessage);
+  
     setMessage("");
   };
 
   return (
     <div>
       <h1>Чат</h1>
-      {!token && <button onClick={login}>🔑 Увійти</button>}
+      {token ? (
+      <button onClick={logout}>🚪 Вийти</button>
+      ) : (
+      <div>
+        <button onClick={register}>🆕 Зареєструватися</button>
+        <button onClick={login}>🔑 Увійти</button>
+      </div>
+          )}
 
       <h2>🟢 Онлайн користувачі:</h2>
       <ul>

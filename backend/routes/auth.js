@@ -8,33 +8,48 @@ const router = express.Router();
 router.post("/register", async (req, res) => {
   try {
     const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const user = new User({ username, password: hashedPassword });
-    await user.save();
 
-    res.status(201).json({ message: "Користувач створений" });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Всі поля обов'язкові" });
+    }
+
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "Користувач з таким ім'ям вже існує" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, password: hashedPassword });
+    await newUser.save();
+
+    res.status(201).json({ message: "Користувач зареєстрований!" });
   } catch (error) {
-    res.status(400).json({ error: "Помилка реєстрації" });
+    console.error("❌ Помилка реєстрації:", error);
+    res.status(500).json({ error: "Помилка сервера" });
   }
 });
 
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+
     const user = await User.findOne({ username });
-    if (!user) return res.status(400).json({ error: "Користувач не знайдений" });
+    if (!user) {
+      return res.status(400).json({ error: "Невірний логін або пароль" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: "Неправильний пароль" });
+    if (!isMatch) {
+      return res.status(400).json({ error: "Невірний логін або пароль" });
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-    res.json({ token, user });
+    res.json({ token, user: { _id: user._id, username: user.username } });
   } catch (error) {
+    console.error("❌ Помилка входу:", error);
     res.status(500).json({ error: "Помилка сервера" });
   }
 });
 
-module.exports = router; 
+module.exports = router;

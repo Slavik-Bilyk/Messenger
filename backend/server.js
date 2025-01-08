@@ -5,7 +5,7 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-
+const Message = require("./models/Message.js");
 const authRoutes = require("./routes/auth.js");
 const messageRoutes = require("./routes/messages.js");
 const User = require("./models/User.js"); 
@@ -43,25 +43,27 @@ mongoose.connect(process.env.MONGO_URI)
       }
   
       console.log(`✅ Користувач ${user.username} (${socket.id}) підключився`);
-      socket.userId = user._id;
+      socket.userId = user._id.toString(); 
   
       io.emit("userOnline", { userId: user._id, username: user.username });
-  
+
       socket.on("sendMessage", async (data) => {
         const { sender, receiver, text } = data;
   
         const message = new Message({ sender, receiver, text });
         await message.save();
   
+        console.log(`📩 Нове повідомлення від ${sender} до ${receiver}: ${text}`);
+  
         const recipientSocket = [...io.sockets.sockets.values()].find(
-          (s) => s.userId && s.userId.toString() === receiver
+          (s) => s.userId === receiver
         );
   
         if (recipientSocket) {
           recipientSocket.emit("receiveMessage", message); 
         }
   
-        socket.emit("receiveMessage", message); 
+        socket.emit("messageSent", message); 
       });
   
       socket.on("disconnect", async () => {
